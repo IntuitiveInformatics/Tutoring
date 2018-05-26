@@ -5,30 +5,39 @@
  *			SINGLE craps game.
 ***********************************************************************/
 import java.util.Random; 	// Import the random number generator
-//import java.util.Scanner;
+import java.util.Scanner;
 
 public class CrapsGame 
 {	
 	// Declare class variables.
-	private int numOfDiceRolls;				// Total number of dice rolls.
+    private String nameCheck;
+    private static String playAgain;         // Holds whether or not the user wants to play again
+    private int checkBalance;
+    private static boolean played = false;
+    private int numOfDiceRolls;				// Total number of dice rolls.
+    private int initialBet;                 // Initial Bet
 	int pointNumber;  						// Initial roll if not craps or natural.
 	private CrapsMetricsMonitor gameStats;	// CrapsMetricsMonitor object.
-	/*private Scanner readIn = 
-			new Scanner(System.in); */
+	private Scanner readIn =
+			new Scanner(System.in);         //Scanner object to take in questions
 	private Random rand1 = new Random();		// Create a Random object for dice rolling.
-	private Random rand2 = new Random();											
-	private static String nameCheck;
+	private Random rand2 = new Random();		// Create a second Random object for the second dice.
+
+
 	
 	// Constructor
 	public CrapsGame() { numOfDiceRolls = 0; }
 
 	// Parameterized Constructor
-	public CrapsGame(CrapsMetricsMonitor monitorObject, String name) 
+	public CrapsGame(CrapsMetricsMonitor monitorObject, String name, int bankBalance)
 	{
 		this.pointNumber = 0;				// Initialize point number flag for the 1st roll.
-		this.numOfDiceRolls = 0;			// Initialize the number of dice rolls.
+		this.numOfDiceRolls = 0;            // Initialize the number of dice rolls.
+        this.initialBet = 0;
 		this.gameStats = monitorObject;		// Initialize the CrapsMetricsMonitor Object.
 		nameCheck = name;
+		checkBalance = bankBalance;
+		playAgain = "t";
 	}
 	 
 	// Increments the number of dice rolls that have occurred in the current game.
@@ -36,63 +45,205 @@ public class CrapsGame
 	
 	// Getter method for the number of dice rolls.
 	public int getDiceRolls() { return numOfDiceRolls; }
-	
-	/*public void balanceLimitException(int bet) throws CustomExceptions
+
+	public void setCheckBalance(int testBalance)
+    {
+        checkBalance = testBalance;
+    }
+
+	public void changeBet() throws GameExceptions
+    {
+        System.out.print("Enter your passline bet (must be\nbetween $1 and $" +
+                checkBalance + "): $");
+        initialBet = readIn.nextInt(); // Set initalBet to the new amount.
+        try
+        {
+            balanceLimitException(initialBet);
+            negativeBetException(initialBet);
+            CrapsSimulation.setInitialBet(initialBet);
+            CrapsSimulation.setBankBalance(CrapsSimulation.getBankBalance() - initialBet);
+            System.out.println("\n" + this.nameCheck + " bets $" + initialBet);
+        }
+        catch (BalanceLimitException ae)
+        {
+            System.out.println(ae.getMessage());
+            changeBet();
+        }
+        catch (NegativeBetException ae2)
+        {
+            System.out.println(ae2.getMessage());
+            changeBet();
+        }
+    }
+
+	public void balanceLimitException(int bet) throws GameExceptions
 	{
-		 Initial Bet: Exception is thrown when the user attempts to 
-		bet an amount that is outside the valid range; initial > 1000, 
-		< 0., or when betting above the balance in their account.
+		 if (bet == 0)
+         {
+             throw new BalanceLimitException("Invalid Bet! You cannot bet nothing.");
+         }
+         else if (bet > checkBalance)
+         {
+             throw new BalanceLimitException("Invalid Bet! You cannot bet more money than you have.");
+         }
 	}
 	
-	public void negativeBetException(int bet) throws CustomExceptions
+	public void negativeBetException(int bet) throws GameExceptions
 	{
-		Thrown when the player tries to bet < 0
+		if(bet < 0)
+        {
+            throw new NegativeBetException("Invalid Bet! You cannot bet a negative number!");
+        }
 	}
-	
-	public void negativeBalanceException(int bet, int bankBal)
+
+	public static void resetPlayed()
+    {
+        played = false;
+    }
+
+	public void changeBalance() throws GameExceptions
+    {
+	    //Allows the player to change the balance that they start with (if the original was a negative)
+        System.out.println("Please enter how much money you are going to bring to the table");
+        checkBalance = readIn.nextInt();
+        try
+        {
+            negativeBalanceException(checkBalance);
+            CrapsSimulation.setBankBalance(checkBalance);
+        }
+        catch(NegativeBalanceException ae)
+        {
+            System.out.println(ae.getMessage());
+            changeBalance();
+        }
+    }
+
+	public void negativeBalanceException(int bankBal) throws GameExceptions
 	{
-		//Thrown when user tries to bet with a 0 balance.
-	
-		if(bet == 0 || bet > bankBal) 
-			throw CustomExceptions;
+		//Thrown when user tries to start the game with a negative Balance.
+
+		if(bankBal < 0) throw new NegativeBalanceException("You cannot come to the table with a negative balance");
+
 	}
-	
-	public void invalidPlayerNameException(String player) throws CustomExceptions
+
+	public void changeName() throws GameExceptions
+    {
+        System.out.println("Please enter another name: ");
+        nameCheck = readIn.nextLine();
+        try
+        {
+            invalidPlayerNameException(nameCheck);
+            CrapsSimulation.setName(nameCheck);
+        }
+        catch (InvalidPlayerNameException ae)
+        {
+            System.out.println(ae.getMessage());
+            changeName();
+        }
+
+    }
+
+	public void invalidPlayerNameException(String nameCheck) throws GameExceptions
 	{
-		Thrown when the player attempts to enter a single space.
-		
+        if(nameCheck.equals(" ") || nameCheck.equals(""))
+        {
+            throw new InvalidPlayerNameException("Invalid Player Name Detected.");
+        }
 	}
-	
-	public void unknownAnswerException() throws CustomExceptions
+
+	public void askAgain() throws GameExceptions
+    {
+        System.out.println("Would you like to play again? Please enter 'y' or 'n': ");
+        playAgain = readIn.nextLine();
+        try
+        {
+            unknownAnswerException(playAgain);
+        }
+        catch (UnknownAnswerException ae)
+        {
+            System.out.println(ae.getMessage());
+            askAgain();
+        }
+
+    }
+
+    public void unknownAnswerException(String response) throws GameExceptions
 	{
-		Thrown when the player attempts to enter an invalid answer 
-		 * to betting again or replaying the game.
+		if(!(response.equals("y") || response.equals("n")))
+        {
+            throw new UnknownAnswerException( "\"" + response + "\"" +  " is not a valid response to the question.");
+        }
 	}
-	*/
+
+	public String getPlayAgain()
+    {
+        return playAgain;
+    }
 	
 	// Boolean method with the logic for playing the game.
 	public boolean playGame() throws GameExceptions
-	{	
-		System.out.println("[" + nameCheck + "]");
-		if(nameCheck.equals(" ") || nameCheck.equals(""))
-		{
-			throw new InvalidPlayerNameException("Invalid: Please enter name.");
-		} else
-		{
-			System.out.println("Here");
-		}
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+	{
+
+	    if(played) {
+            System.out.println("Would you like to play again?\n('y' or 'n'): ");
+            playAgain = readIn.nextLine();
+            try
+            {
+                unknownAnswerException(playAgain);
+            }
+            catch (UnknownAnswerException ae)
+            {
+                System.out.println(ae.getMessage());
+                askAgain();
+            }
+            if(playAgain.equals("n")) return false;
+        }
+
+	    played = true;
+		try
+        {
+		    invalidPlayerNameException(nameCheck);
+
+        } catch (InvalidPlayerNameException ae)
+        {
+            System.out.println(ae.getMessage());
+		    changeName();
+        }
+
+        try
+        {
+            negativeBalanceException(checkBalance);
+
+        } catch (NegativeBalanceException ae)
+        {
+            System.out.println(ae.getMessage());
+		    changeBalance();
+        }
+
+        // Prompt the user to enter their initial bet amount,
+        System.out.print("Enter your passline bet (must be\nbetween $1 and $" +
+                checkBalance + "): $");
+        initialBet = readIn.nextInt(); 		// Read in their response.
+
+        try
+        {
+            balanceLimitException(initialBet);
+            negativeBetException(initialBet);
+            CrapsSimulation.setInitialBet(initialBet);
+            CrapsSimulation.setBankBalance(CrapsSimulation.getBankBalance() - initialBet);
+            System.out.println("\n" + this.nameCheck + " bets $" + initialBet);
+        }
+        catch (BalanceLimitException ae)
+        {
+            System.out.println(ae.getMessage());
+            changeBet();
+        }
+        catch (NegativeBetException ae2)
+        {
+            System.out.println(ae2.getMessage());
+            changeBet();
+        }
+
 		while(true) 
 		{	
 			/* Seed and generate the random die roll2. Display the 
